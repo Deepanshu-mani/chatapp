@@ -87,18 +87,18 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900">
+    <div className="flex flex-col h-screen bg-[#0b141a]">
       {/* Header */}
-      <div className="bg-gray-800 px-4 py-3 border-b border-gray-700">
+      <div className="bg-[#202c33] px-4 py-3 border-b border-[#2a3942]">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center">
             <span className="text-white font-semibold text-sm">
               {roomId.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
             <h2 className="text-white font-medium">{roomId}</h2>
-            <p className="text-gray-400 text-sm">Room Chat</p>
+            <p className="text-[#8696a0] text-sm">Room Chat</p>
           </div>
         </div>
       </div>
@@ -116,7 +116,7 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
             >
               {/* Avatar for others */}
               {!isMe && (
-                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 mb-1">
+                <div className="w-8 h-8 bg-[#667781] rounded-full flex items-center justify-center flex-shrink-0 mb-1">
                   <span className="text-white text-xs font-medium">
                     {getInitials(msg.sender)}
                   </span>
@@ -127,13 +127,13 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
               <div
                 className={`max-w-[75%] ${
                   isMe
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-700 text-gray-100"
+                    ? "bg-[#005c4b] text-white"
+                    : "bg-[#202c33] text-[#e9edef]"
                 } rounded-lg px-3 py-2 shadow-sm`}
               >
                 {/* Sender name for others */}
                 {!isMe && (
-                  <div className="text-blue-400 text-xs font-medium mb-1">
+                  <div className="text-[#00a884] text-xs font-medium mb-1">
                     {msg.sender}
                   </div>
                 )}
@@ -145,7 +145,7 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
                 
                 {/* Timestamp placeholder */}
                 <div className={`text-xs mt-1 ${
-                  isMe ? "text-green-200" : "text-gray-400"
+                  isMe ? "text-[#8696a0]" : "text-[#667781]"
                 } text-right`}>
                   {new Date().toLocaleTimeString([], { 
                     hour: '2-digit', 
@@ -156,7 +156,7 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
 
               {/* Avatar for me */}
               {isMe && (
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mb-1">
+                <div className="w-8 h-8 bg-[#00a884] rounded-full flex items-center justify-center flex-shrink-0 mb-1">
                   <span className="text-white text-xs font-medium">
                     {getInitials(msg.sender)}
                   </span>
@@ -169,12 +169,12 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
       </div>
 
       {/* Input Area */}
-      <div className="bg-gray-800 px-4 py-3 border-t border-gray-700">
+      <div className="bg-[#202c33] px-4 py-3 border-t border-[#2a3942]">
         <div className="flex items-end space-x-3">
-          <div className="flex-1 bg-gray-700 rounded-lg px-4 py-2 min-h-[44px] flex items-center">
+          <div className="flex-1 bg-[#2a3942] rounded-lg px-4 py-2 min-h-[44px] flex items-center">
             <textarea
               ref={textareaRef}
-              className="w-full resize-none bg-transparent outline-none text-gray-100 placeholder-gray-400 text-sm leading-relaxed scrollbar-hide"
+              className="w-full resize-none bg-transparent outline-none text-[#e9edef] placeholder-[#8696a0] text-sm leading-relaxed scrollbar-hide"
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
@@ -184,7 +184,7 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
           </div>
           
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full transition-colors duration-200 flex items-center justify-center min-w-[44px] h-[44px]"
+            className="bg-[#00a884] hover:bg-[#00916a] text-white p-3 rounded-full transition-colors duration-200 flex items-center justify-center min-w-[44px] h-[44px]"
             onClick={handleSend}
           >
             <svg

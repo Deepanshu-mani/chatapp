@@ -1,99 +1,202 @@
 import { useEffect, useRef, useState } from "react";
-type MessageType = string;
+
+type MessageType = {
+  sender: string;
+  text: string;
+};
+
 export function Chat({ name, roomId }: { name: string; roomId: string }) {
-    const [input, setInput] = useState("");
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const [messages, setMessages] = useState<MessageType[]>([]);
-    const wsRef = useRef<WebSocket | null>(null);
-  
-    useEffect(() => {
-      const ws = new WebSocket("wss://chatapp-backend-2e0h.onrender.com");
-      ws.onmessage = (event) => {
-        setMessages((m) => [...m, event.data]);
-      };
-  
-      wsRef.current = ws;
-      ws.onopen = () => {
-        ws.send(
-          JSON.stringify({
-            type: "join",
-            payload: {
-              roomId,
-              name,
-            },
-          })
-        );
-      };
-  
-      return () => {
-        ws.close();
-      };
-    }, [roomId, name]);
-  
-    const handleSend = () => {
-      if (input.trim() === "") return;
-      if (wsRef.current) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "chat",
-            payload: { message: input },
-          })
-        );
-      }
-      setInput("");
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
+  const [input, setInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<MessageType[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket("wss://chatapp-backend-2e0h.onrender.com");
+    ws.onmessage = (event) => {
+      try {
+        const messageData = JSON.parse(event.data);
+        setMessages((m) => [...m, messageData]);
+      } catch (error) {
+        // Fallback for plain text messages
+        setMessages((m) => [...m, { sender: "Unknown", text: event.data }]);
       }
     };
-  
-    const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setInput(e.target.value);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height =
-          Math.min(textareaRef.current.scrollHeight, 200) + "px";
-      }
+
+    wsRef.current = ws;
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "join",
+          payload: {
+            roomId,
+            name,
+          },
+        })
+      );
     };
-  
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
+
+    return () => {
+      ws.close();
     };
-  
-    return (
-      <div className="relative h-screen bg-[#111111]">
-        <div className="h-[85vh] w-full bg-[#111111] pb-[100px] overflow-y-auto">
-          {messages.map((msg, idx) => (
-            <div className="pt-6 pl-4" key={idx}>
-              <span className="text-white bg-gradient-to-br from-white/10 to-white/5 border border-white/10 w-11/12 mx-auto rounded-4xl px-3 py-2 transition">
-                {msg}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="absolute bottom-0 w-full flex justify-center">
-          <div className="w-11/12 bg-[#222121] rounded-b-[2rem] rounded-t-[1rem] border border-white/10 flex flex-col-reverse items-end justify-end px-4 py-4 space-y-2 shadow-[0_0_10px_#00000050]">
-            <div className="flex w-full items-end justify-between">
-              <textarea
-                ref={textareaRef}
-                className="w-[90%] resize-none text-xl bg-transparent outline-none text-white/80 leading-relaxed scrollbar-hide transition-all duration-200 ease-in-out"
-                value={input}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                rows={1}
-                placeholder="Type a message..."
-              />
-              <button
-                className="text-white px-6 py-2 rounded-full ml-2 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 hover:bg-white/10 transition"
-                onClick={handleSend}
-              >
-                Send
-              </button>
-            </div>
+  }, [roomId, name]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = () => {
+    if (input.trim() === "") return;
+    if (wsRef.current) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "chat",
+          payload: { message: input },
+        })
+      );
+    }
+    setInput("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+  };
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height =
+        Math.min(textareaRef.current.scrollHeight, 120) + "px";
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const getInitials = (senderName: string) => {
+    return senderName.charAt(0).toUpperCase();
+  };
+
+  const isMyMessage = (sender: string) => {
+    return sender === name;
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-[#0b141a]">
+      {/* Header */}
+      <div className="bg-[#202c33] px-4 py-3 border-b border-[#2a3942]">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">
+              {roomId.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <h2 className="text-white font-medium">{roomId}</h2>
+            <p className="text-[#8696a0] text-sm">Room Chat</p>
           </div>
         </div>
       </div>
-    );
-  }
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
+        {messages.map((msg, idx) => {
+          const isMe = isMyMessage(msg.sender);
+          return (
+            <div
+              key={idx}
+              className={`flex items-end space-x-2 ${
+                isMe ? "justify-end" : "justify-start"
+              } mb-4`}
+            >
+              {/* Avatar for others */}
+              {!isMe && (
+                <div className="w-8 h-8 bg-[#667781] rounded-full flex items-center justify-center flex-shrink-0 mb-1">
+                  <span className="text-white text-xs font-medium">
+                    {getInitials(msg.sender)}
+                  </span>
+                </div>
+              )}
+
+              {/* Message Bubble */}
+              <div
+                className={`max-w-[75%] ${
+                  isMe
+                    ? "bg-[#005c4b] text-white"
+                    : "bg-[#202c33] text-[#e9edef]"
+                } rounded-lg px-3 py-2 shadow-sm`}
+              >
+                {/* Sender name for others */}
+                {!isMe && (
+                  <div className="text-[#00a884] text-xs font-medium mb-1">
+                    {msg.sender}
+                  </div>
+                )}
+                
+                {/* Message text */}
+                <div className="text-sm leading-relaxed break-words">
+                  {msg.text}
+                </div>
+                
+                {/* Timestamp placeholder */}
+                <div className={`text-xs mt-1 ${
+                  isMe ? "text-[#8696a0]" : "text-[#667781]"
+                } text-right`}>
+                  {new Date().toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </div>
+              </div>
+
+              {/* Avatar for me */}
+              {isMe && (
+                <div className="w-8 h-8 bg-[#00a884] rounded-full flex items-center justify-center flex-shrink-0 mb-1">
+                  <span className="text-white text-xs font-medium">
+                    {getInitials(msg.sender)}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="bg-[#202c33] px-4 py-3 border-t border-[#2a3942]">
+        <div className="flex items-end space-x-3">
+          <div className="flex-1 bg-[#2a3942] rounded-lg px-4 py-2 min-h-[44px] flex items-center">
+            <textarea
+              ref={textareaRef}
+              className="w-full resize-none bg-transparent outline-none text-[#e9edef] placeholder-[#8696a0] text-sm leading-relaxed scrollbar-hide"
+              value={input}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder="Type a message"
+            />
+          </div>
+          
+          <button
+            className="bg-[#00a884] hover:bg-[#00916a] text-white p-3 rounded-full transition-colors duration-200 flex items-center justify-center min-w-[44px] h-[44px]"
+            onClick={handleSend}
+          >
+            <svg
+              className="w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

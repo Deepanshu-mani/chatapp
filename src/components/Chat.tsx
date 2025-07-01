@@ -7,7 +7,7 @@ export function Chat({ name, roomId }: { name: string; roomId: string }) {
     const wsRef = useRef<WebSocket | null>(null);
   
     useEffect(() => {
-      const ws = new WebSocket("ws://localhost:8080");
+      const ws = new WebSocket("wss://chatapp-backend-2e0h.onrender.com");
       ws.onmessage = (event) => {
         setMessages((m) => [...m, event.data]);
       };

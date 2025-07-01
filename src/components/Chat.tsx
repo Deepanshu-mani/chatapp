@@ -1,99 +1,107 @@
 import { useEffect, useRef, useState } from "react";
-type MessageType = string;
+import { useWebSocket } from "../hooks/useWebSocket";
+import { ConnectionStatus } from "./ConnectionStatus";
+import { MessageBubble } from "./MessageBubble";
+
 export function Chat({ name, roomId }: { name: string; roomId: string }) {
-    const [input, setInput] = useState("");
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const [messages, setMessages] = useState<MessageType[]>([]);
-    const wsRef = useRef<WebSocket | null>(null);
-  
-    useEffect(() => {
-      const ws = new WebSocket("ws://localhost:8080");
-      ws.onmessage = (event) => {
-        setMessages((m) => [...m, event.data]);
-      };
-  
-      wsRef.current = ws;
-      ws.onopen = () => {
-        ws.send(
-          JSON.stringify({
-            type: "join",
-            payload: {
-              roomId,
-              name,
-            },
-          })
-        );
-      };
-  
-      return () => {
-        ws.close();
-      };
-    }, [roomId, name]);
-  
-    const handleSend = () => {
-      if (input.trim() === "") return;
-      if (wsRef.current) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "chat",
-            payload: { message: input },
-          })
-        );
-      }
+  const [input, setInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { messages, connectionStatus, sendMessage, reconnect } = useWebSocket(roomId, name);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = () => {
+    if (input.trim() === "") return;
+    
+    const success = sendMessage(input);
+    if (success) {
       setInput("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
-    };
-  
-    const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setInput(e.target.value);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height =
-          Math.min(textareaRef.current.scrollHeight, 200) + "px";
-      }
-    };
-  
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    };
-  
-    return (
-      <div className="relative h-screen bg-[#111111]">
-        <div className="h-[85vh] w-full bg-[#111111] pb-[100px] overflow-y-auto">
-          {messages.map((msg, idx) => (
-            <div className="pt-6 pl-4" key={idx}>
-              <span className="text-white bg-gradient-to-br from-white/10 to-white/5 border border-white/10 w-11/12 mx-auto rounded-4xl px-3 py-2 transition">
-                {msg}
-              </span>
-            </div>
-          ))}
+    }
+  };
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height =
+        Math.min(textareaRef.current.scrollHeight, 200) + "px";
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="relative h-screen bg-[#111111] flex flex-col">
+      {/* Header */}
+      <div className="bg-[#1a1a1a] border-b border-white/10">
+        <div className="px-4 py-3">
+          <h1 className="text-white font-semibold">Room: {roomId}</h1>
+          <p className="text-white/60 text-sm">Logged in as {name}</p>
         </div>
-        <div className="absolute bottom-0 w-full flex justify-center">
-          <div className="w-11/12 bg-[#222121] rounded-b-[2rem] rounded-t-[1rem] border border-white/10 flex flex-col-reverse items-end justify-end px-4 py-4 space-y-2 shadow-[0_0_10px_#00000050]">
-            <div className="flex w-full items-end justify-between">
-              <textarea
-                ref={textareaRef}
-                className="w-[90%] resize-none text-xl bg-transparent outline-none text-white/80 leading-relaxed scrollbar-hide transition-all duration-200 ease-in-out"
-                value={input}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                rows={1}
-                placeholder="Type a message..."
-              />
-              <button
-                className="text-white px-6 py-2 rounded-full ml-2 bg-gradient-to-br from-white/10 to-white/5 border border-white/10 hover:bg-white/10 transition"
-                onClick={handleSend}
-              >
-                Send
-              </button>
-            </div>
+        <ConnectionStatus status={connectionStatus} onReconnect={reconnect} />
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto pb-4">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-white/50 text-center">
+              Welcome to room {roomId}!<br />
+              Start chatting to see messages here.
+            </p>
           </div>
+        ) : (
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isOwnMessage={message.sender === name}
+            />
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 bg-[#1a1a1a] border-t border-white/10">
+        <div className="flex items-end gap-3 max-w-4xl mx-auto">
+          <div className="flex-1 bg-[#2a2a2a] rounded-2xl border border-white/10 px-4 py-3">
+            <textarea
+              ref={textareaRef}
+              className="w-full resize-none bg-transparent outline-none text-white placeholder-white/50 leading-relaxed scrollbar-hide"
+              value={input}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder={
+                connectionStatus === 'connected' 
+                  ? "Type a message..." 
+                  : "Connecting..."
+              }
+              disabled={connectionStatus !== 'connected'}
+            />
+          </div>
+          <button
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-2xl font-medium transition-colors"
+            onClick={handleSend}
+            disabled={connectionStatus !== 'connected' || !input.trim()}
+          >
+            Send
+          </button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
